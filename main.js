@@ -41,31 +41,34 @@ window.onload = function() {
 
   Board.prototype = {
     init: function() {
-      this.stones.map(function(row) {
-        row.map(function(stone) {
-          stone.toNone();
-        });
+      this.scanAll(function(stone) {
+        stone.toNone();
       });
 
       this.stones[3][3].toWhite();
       this.stones[3][4].toBlack();
       this.stones[4][3].toBlack();
       this.stones[4][4].toWhite();
-      this.change();
+      this.update();
       return this;
     },
-    // scanAllLine: function() {
-    // },
-    // scanLine: function() {
-    // },
-    change: function() {
+    update: function() {
+      this.scanAll(function(stone) {
+        var id = 'cell' + stone.row + stone.column;
+        var cell = document.getElementById(id);
+        cell.innerHTML = stone.display();
+      });
+    },
+    scanAll: function(callback) {
       this.stones.map(function(row) {
         row.map(function(stone) {
-          var id = 'cell' + stone.row + stone.column;
-          var cell = document.getElementById(id);
-          cell.innerHTML = stone.display();
+          callback(stone);
         });
       });
+    },
+    scanAllLine: function() {
+    },
+    scanLine: function() {
     }
   };
 
