@@ -35,9 +35,10 @@ window.onload = function() {
         cell.id = 'cell' + row + column;
 
         var stone = new Stone(row, column);
-        var text = document.createTextNode(stone.display());
+        var image = document.createElement('img');
+        image.src = stone.display();
 
-        cell.appendChild(text);
+        cell.appendChild(image);
         td.appendChild(cell);
         tr.appendChild(td);
 
@@ -68,7 +69,9 @@ window.onload = function() {
       this.scanAll(function(stone) {
         var id = 'cell' + stone.row + stone.column;
         var cell = document.getElementById(id);
-        cell.innerHTML = stone.display();
+        var image = document.createElement('img');
+        image.src = stone.display();
+        cell.childNodes[0].src = stone.display();
       });
     },
     scanAll: function(callback) {
@@ -173,12 +176,13 @@ window.onload = function() {
       return this.state == other.state * -1;
     },
     display: function() {
-      var states = {
-        '0': 'N',
-        '1': 'B',
-        '-1': 'W'
+      var base = './images/';
+      var images = {
+        '0': base + 'none.gif',
+        '1': base + 'black.gif',
+        '-1': base + 'white.gif'
       };
-      return states[this.state.toString()];
+      return images[this.state.toString()];
     }
   };
 
