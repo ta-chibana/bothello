@@ -4,8 +4,31 @@ window.onload = function() {
   };
 
   Game.prototype = {
+    currentTurn: function() {
+      return this.turn;
+    },
+    enemyTurn: function() {
+      return this.turn * -1;
+    },
     changeTurn: function() {
       this.turn *= -1;
+    },
+    finish: function(board) {
+      var blackCount = board.stonesCountBy(Stone.states.black);
+      var whiteCount = board.stonesCountBy(Stone.states.white);
+      var message;
+      if (blackCount > whiteCount) {
+        message = '黒の勝ちです！';
+      } else if (blackCount < whiteCount) {
+        message = '白の勝ちです！';
+      } else {
+        message = '引き分けです！';
+      }
+      this.displayMessage(message);
+    },
+    displayMessage: function(message) {
+      var messageArea = document.getElementById('message');
+      messageArea.innerHTML = message;
     }
   }
 
@@ -55,13 +78,13 @@ window.onload = function() {
   Board.prototype = {
     init: function() {
       this.scanAll(function(stone) {
-        stone.toNone();
+        stone.toState(Stone.states.none);
       });
 
-      this.stones[3][3].toWhite();
-      this.stones[3][4].toBlack();
-      this.stones[4][3].toBlack();
-      this.stones[4][4].toWhite();
+      this.stones[3][3].toState(Stone.states.white);
+      this.stones[3][4].toState(Stone.states.black);
+      this.stones[4][3].toState(Stone.states.black);
+      this.stones[4][4].toState(Stone.states.white);
       this.update();
       return this;
     },
@@ -109,7 +132,7 @@ window.onload = function() {
         var firstTarget = this.findStoneByRelative(stone, relativePosition(distance));
 
         // 長い
-        if ((!firstTarget || firstTarget.isNone() || !firstTarget.isDifferentColor(stone))) {
+        if ((!firstTarget || firstTarget.isNone() || !firstTarget.isDifferentState(stone))) {
           return;
         }
 
@@ -120,7 +143,7 @@ window.onload = function() {
         while (targetStone = this.findStoneByRelative(stone, relativePosition(distance))) {
           if (targetStone.isNone()) {
             return;
-          } else if (targetStone.isDifferentColor(stone)) {
+          } else if (targetStone.isDifferentState(stone)) {
             tmpTargetStones.push(targetStone);
             distance++;
           } else {
@@ -131,13 +154,13 @@ window.onload = function() {
       }, this);
       return targetStones;
     },
-    canReverse: function() {
+    canReverse: function(state) {
       return this.stones.reduce(function(previous, current) {
         return previous.concat(current);
       }).filter(function(stone) {
         return stone.isNone();
       }).some(function(stone) {
-        var testTargetStone = new Stone(stone.row, stone.column, game.turn);
+        var testTargetStone = new Stone(stone.row, stone.column, state);
         var reversibleStones = this.scanAllLine(testTargetStone);
         return reversibleStones.length > 0;
       }, this);
@@ -150,36 +173,39 @@ window.onload = function() {
       } else {
         return null;
       }
+    },
+    stonesCountBy: function(state) {
+      return this.stones.reduce(function(previous, current) {
+        return previous.concat(current);
+      }).filter(function(stone) {
+        return stone.state == state;
+      }).length;
     }
   };
 
   var Stone = function(row, column, state) {
     this.row = row;
     this.column = column;
-    this.state = state || 0;
+    this.state = state || Stone.states.none;
+  };
+
+  Stone.states = {
+    none: 0,
+    black: 1,
+    white: -1
   };
 
   Stone.prototype = {
-    toNone: function() {
-      this.state = 0;
-    },
-    toBlack: function() {
-      this.state = 1;
-    },
-    toWhite: function() {
-      this.state = -1;
-    },
-    toTurnsColor: function(game) {
-      this.state = game.turn;
-      return this;
+    toState: function(state) {
+      this.state = state;
     },
     reverse: function() {
       this.state *= -1;
     },
     isNone: function() {
-      return this.state == 0;
+      return this.state == Stone.states.none;
     },
-    isDifferentColor: function(other) {
+    isDifferentState: function(other) {
       return this.state == other.state * -1;
     },
     display: function() {
@@ -204,28 +230,33 @@ window.onload = function() {
         var column = this.dataset.column;
         var selectedStone = board.stones[row][column];
         if (!selectedStone.isNone()) {
-          console.log('すでに置かれているよ');
           return;
         }
 
-        var tmpStone = new Stone(selectedStone.row, selectedStone.column, game.turn);
+        var tmpStone = new Stone(selectedStone.row, selectedStone.column, game.currentTurn());
         var targets = board.scanAllLine(tmpStone);
         if (targets.length > 0) {
-          selectedStone.toTurnsColor(game);
+          selectedStone.toState(game.currentTurn());
           targets.forEach(function(s) {
             s.reverse();
           });
           board.update();
         } else {
-          console.log('no changed..')
+          game.displayMessage('そこには置けません。');
           return;
         }
 
-        game.changeTurn();
-
-        if (!board.canReverse()) {
+        if (board.canReverse(game.enemyTurn())) {
           game.changeTurn();
+          game.displayMessage('');
+          return;
         }
+
+        if (board.canReverse(game.currentTurn())) {
+          game.displayMessage('相手の置ける場所がないのでパスされました。');
+          return;
+        }
+        game.finish(board);
       });
     });
   })();
