@@ -69,19 +69,17 @@ window.onload = function() {
       this.scanAll(function(stone) {
         var id = 'cell' + stone.row + stone.column;
         var cell = document.getElementById(id);
-        var image = document.createElement('img');
-        image.src = stone.display();
         cell.childNodes[0].src = stone.display();
       });
     },
     scanAll: function(callback) {
-      this.stones.map(function(row) {
-        row.map(function(stone) {
+      this.stones.forEach(function(row) {
+        row.forEach(function(stone) {
           callback(stone);
         });
       });
     },
-    scanAllLine: function(stone, callback) {
+    scanAllLine: function(stone) {
       var directions = [
         { vertical: -1, horizontal: 0 },
         { vertical: -1, horizontal: 1 },
@@ -133,7 +131,16 @@ window.onload = function() {
       }, this);
       return targetStones;
     },
-    scanLine: function() {
+    canReverse: function() {
+      return this.stones.reduce(function(previous, current) {
+        return previous.concat(current);
+      }).filter(function(stone) {
+        return stone.isNone();
+      }).some(function(stone) {
+        var testTargetStone = new Stone(stone.row, stone.column, game.turn);
+        var reversibleStones = this.scanAllLine(testTargetStone);
+        return reversibleStones.length > 0;
+      }, this);
     },
     findStoneByRelative: function(stone, relative) {
       var row = stone.row + relative.row;
@@ -195,17 +202,16 @@ window.onload = function() {
       cell.addEventListener('click', function() {
         var row = this.dataset.row;
         var column = this.dataset.column;
-        var stone = board.stones[row][column];
-        if (!stone.isNone()) {
+        var selectedStone = board.stones[row][column];
+        if (!selectedStone.isNone()) {
           console.log('すでに置かれているよ');
           return;
         }
-        console.log('λ..');
 
-        var tmpStone = new Stone(stone.row, stone.column, game.turn);
+        var tmpStone = new Stone(selectedStone.row, selectedStone.column, game.turn);
         var targets = board.scanAllLine(tmpStone);
         if (targets.length > 0) {
-          stone.toTurnsColor(game);
+          selectedStone.toTurnsColor(game);
           targets.forEach(function(s) {
             s.reverse();
           });
@@ -216,6 +222,10 @@ window.onload = function() {
         }
 
         game.changeTurn();
+
+        if (!board.canReverse()) {
+          game.changeTurn();
+        }
       });
     });
   })();
